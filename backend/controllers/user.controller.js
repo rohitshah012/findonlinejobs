@@ -122,19 +122,19 @@ export const updateProfile = async (req, res) => {
 
 
 
-        let skillsArray;
-        if(skills){
-            skillsArray = skills.split(",");
-        }
-        const userId = req.id; // middleware authentication
-        let user = await User.findById(userId);
+        // let skillsArray;
+        // if(skills){
+        //     skillsArray = skills.split(",");
+        // }
+        // const userId = req.id; // middleware authentication
+        // let user = await User.findById(userId);
 
-        if (!user) {
-            return res.status(400).json({
-                message: "User not found.",
-                success: false
-            })
-        }
+        // if (!user) {
+        //     return res.status(400).json({
+        //         message: "User not found.",
+        //         success: false
+        //     })
+        // }
         // updating data
         if(fullname) user.fullname = fullname
         if(email) user.email = email
