@@ -22,7 +22,7 @@ const PostJob = () => {
         location: "",
         jobType: "",
         experience: "",
-        position: 0,
+        position: "",
         companyId: ""
     });
     const [loading, setLoading]= useState(false);
@@ -35,6 +35,7 @@ const PostJob = () => {
 
     const selectChangeHandler = (value) => {
         const selectedCompany = companies.find((company)=> company.name.toLowerCase() === value);
+        if (!selectedCompany) return;
         setInput({...input, companyId:selectedCompany._id});
     };
 
@@ -53,7 +54,7 @@ const PostJob = () => {
                 navigate("/admin/jobs");
             }
         } catch (error) {
-            toast.error(error.response.data.message);
+            toast.error(error.response?.data?.message || "Something went wrong");
         } finally{
             setLoading(false);
         }
@@ -98,10 +99,12 @@ const PostJob = () => {
                         <div>
                             <Label>Salary</Label>
                             <Input
-                                type="text"
+                                type="number"
                                 name="salary"
                                 value={input.salary}
                                 onChange={changeEventHandler}
+                                min="1"
+                                step="0.1"
                                 className="focus-visible:ring-offset-0 focus-visible:ring-0 my-1"
                             />
                         </div>
@@ -128,20 +131,24 @@ const PostJob = () => {
                         <div>
                             <Label>Experience Level</Label>
                             <Input
-                                type="text"
+                                type="number"
                                 name="experience"
                                 value={input.experience}
                                 onChange={changeEventHandler}
+                                min="0"
+                                step="1"
                                 className="focus-visible:ring-offset-0 focus-visible:ring-0 my-1"
                             />
                         </div>
                         <div>
-                            <Label>No of Postion</Label>
+                            <Label>No of Position</Label>
                             <Input
                                 type="number"
                                 name="position"
                                 value={input.position}
                                 onChange={changeEventHandler}
+                                min="1"
+                                step="1"
                                 className="focus-visible:ring-offset-0 focus-visible:ring-0 my-1"
                             />
                         </div>
@@ -156,7 +163,7 @@ const PostJob = () => {
                                             {
                                                 companies.map((company) => {
                                                     return (
-                                                        <SelectItem value={company?.name?.toLowerCase()}>{company.name}</SelectItem>
+                                                        <SelectItem key={company._id} value={company?.name?.toLowerCase()}>{company.name}</SelectItem>
                                                     )
                                                 })
                                             }

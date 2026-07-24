@@ -6,21 +6,60 @@ export const postJob = async (req, res) => {
         const { title, description, requirements, salary, location, jobType, experience, position, companyId } = req.body;
         const userId = req.id;
 
-        if (!title || !description || !requirements || !salary || !location || !jobType || !experience || !position || !companyId) {
+        if (
+            !title ||
+            !description ||
+            !requirements ||
+            salary === undefined ||
+            salary === "" ||
+            !location ||
+            !jobType ||
+            experience === undefined ||
+            experience === "" ||
+            position === undefined ||
+            position === "" ||
+            !companyId
+        ) {
             return res.status(400).json({
-                message: "Somethin is missing.",
+                message: "Something is missing.",
                 success: false
             })
         };
+
+        const salaryNumber = Number(salary);
+        const experienceNumber = Number(experience);
+        const positionNumber = Number(position);
+
+        if (!Number.isFinite(salaryNumber) || salaryNumber <= 0) {
+            return res.status(400).json({
+                message: "Salary must be a valid number.",
+                success: false
+            });
+        }
+
+        if (!Number.isFinite(experienceNumber) || experienceNumber < 0) {
+            return res.status(400).json({
+                message: "Experience must be a valid number.",
+                success: false
+            });
+        }
+
+        if (!Number.isInteger(positionNumber) || positionNumber <= 0) {
+            return res.status(400).json({
+                message: "Position must be a valid whole number.",
+                success: false
+            });
+        }
+
         const job = await Job.create({
             title,
             description,
             requirements: requirements.split(","),
-            salary: Number(salary),
+            salary: salaryNumber,
             location,
             jobType,
-            experienceLevel: experience,
-            position,
+            experienceLevel: experienceNumber,
+            position: positionNumber,
             company: companyId,
             created_by: userId
         });
@@ -31,6 +70,10 @@ export const postJob = async (req, res) => {
         });
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Internal server error.",
+            success: false
+        });
     }
 }
 // student k liye
