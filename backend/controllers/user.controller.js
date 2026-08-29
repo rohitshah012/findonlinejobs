@@ -6,6 +6,8 @@ import cloudinary from "../utils/cloudinary.js";
 
 export const register = async (req, res) => {
     try {
+
+        // get data form user signup 
         const { fullname, email, phoneNumber, password, role } = req.body;
          
         if (!fullname || !email || !phoneNumber || !password || !role) {
@@ -14,6 +16,7 @@ export const register = async (req, res) => {
                 success: false
             });
         };
+        // check user should not exits in db
         const user = await User.findOne({ email });
         if (user) {
             return res.status(400).json({
@@ -29,9 +32,12 @@ export const register = async (req, res) => {
             const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
             profilePhoto = cloudResponse.secure_url;
         }
-
+         
+        // hashing password , no one can read
         const hashedPassword = await bcrypt.hash(password, 10);
 
+
+        //actual user is created here
         await User.create({
             fullname,
             email,
@@ -49,10 +55,16 @@ export const register = async (req, res) => {
         });
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Internal server error.",
+            success: false
+        });
     }
 }
 export const login = async (req, res) => {
     try {
+
+        //get user filled data from frontend 
         const { email, password, role } = req.body;
         
         if (!email || !password || !role) {
@@ -61,6 +73,7 @@ export const login = async (req, res) => {
                 success: false
             });
         };
+        // check user should exits in our db to access login
         let user = await User.findOne({ email });
         if (!user) {
             return res.status(400).json({
@@ -68,8 +81,9 @@ export const login = async (req, res) => {
                 success: false,
             })
         }
+        // here we compare user filled password to our atual user password
         const isPasswordMatch = await bcrypt.compare(password, user.password);
-        if (!isPasswordMatch) {
+        if (!isPasswordMatch) { 
             return res.status(400).json({
                 message: "Incorrect email or password.",
                 success: false,
@@ -88,6 +102,8 @@ export const login = async (req, res) => {
         }
         const token = await jwt.sign(tokenData, process.env.SECRET_KEY, { expiresIn: '1d' });
 
+
+        // this user data is sent to frontend
         user = {
             _id: user._id,
             fullname: user.fullname,
@@ -97,23 +113,31 @@ export const login = async (req, res) => {
             profile: user.profile
         }
 
-        return res.status(200).cookie("token", token, { maxAge: 1 * 24 * 60 * 60 * 1000, httpsOnly: true, sameSite: 'strict' }).json({
+        return res.status(200).cookie("token", token, { maxAge: 1 * 24 * 60 * 60 * 1000, httpOnly: true, sameSite: 'strict' }).json({
             message: `Welcome back ${user.fullname}`,
             user,
             success: true
         })
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Internal server error.",
+            success: false
+        });
     }
 }
 export const logout = async (req, res) => {
     try {
-        return res.status(200).cookie("token", "", { maxAge: 0 }).json({
+        return res.status(200).cookie("token", "", { maxAge: 0, httpOnly: true, sameSite: 'strict' }).json({
             message: "Logged out successfully.",
             success: true
         })
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Internal server error.",
+            success: false
+        });
     }
 }
 export const updateProfile = async (req, res) => {
@@ -122,7 +146,7 @@ export const updateProfile = async (req, res) => {
         
         let skillsArray;
         if(skills){
-            skillsArray = skills.split(",");
+            skillsArray = skills.split(",").map(skill => skill.trim()).filter(Boolean);
         }
         const userId = req.id; // middleware authentication
         let user = await User.findById(userId);
@@ -133,9 +157,21 @@ export const updateProfile = async (req, res) => {
                 success: false
             })  
         }
+        
+        // checking for email availability
+        if (email && email !== user.email) {
+            const existingEmail = await User.findOne({ email });
+            if (existingEmail) {
+                return res.status(400).json({
+                    message: "Email is already in use by another account.",
+                    success: false
+                });
+            }
+            user.email = email;
+        }
+
         // updating data
         if(fullname) user.fullname = fullname
-        if(email) user.email = email
         if(phoneNumber)  user.phoneNumber = phoneNumber
         if(bio) user.profile.bio = bio
         if(skills) user.profile.skills = skillsArray
@@ -168,5 +204,81 @@ export const updateProfile = async (req, res) => {
         })
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Internal server error.",
+            success: false
+        });
     }
 }
+
+export const saveJob = async (req, res) => {
+    try {
+        const userId = req.id;
+        const jobId = req.params.id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found.",
+                success: false
+            });
+        }
+
+        if (!user.profile.savedJobs) {
+            user.profile.savedJobs = [];
+        }
+
+        const isSaved = user.profile.savedJobs.includes(jobId);
+        if (isSaved) {
+            user.profile.savedJobs = user.profile.savedJobs.filter(id => id.toString() !== jobId);
+            await user.save();
+            return res.status(200).json({
+                message: "Job removed from bookmarks.",
+                success: true,
+                isSaved: false
+            });
+        } else {
+            user.profile.savedJobs.push(jobId);
+            await user.save();
+            return res.status(200).json({
+                message: "Job bookmarked successfully.",
+                success: true,
+                isSaved: true
+            });
+        }
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            message: "Internal server error.",
+            success: false
+        });
+    }
+};
+
+export const getSavedJobs = async (req, res) => {
+    try {
+        const userId = req.id;
+        const user = await User.findById(userId).populate({
+            path: 'profile.savedJobs',
+            populate: {
+                path: 'company'
+            }
+        });
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found.",
+                success: false
+            });
+        }
+        return res.status(200).json({
+            savedJobs: user.profile.savedJobs || [],
+            success: true
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            message: "Internal server error.",
+            success: false
+        });
+    }
+};

@@ -54,7 +54,7 @@ export const postJob = async (req, res) => {
         const job = await Job.create({
             title,
             description,
-            requirements: requirements.split(","),
+            requirements: requirements.split(",").map(r => r.trim()).filter(Boolean),
             salary: salaryNumber,
             location,
             jobType,
@@ -101,6 +101,10 @@ export const getAllJobs = async (req, res) => {
         })
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Internal server error.",
+            success: false
+        });
     }
 }
 // student
@@ -119,6 +123,10 @@ export const getJobById = async (req, res) => {
         return res.status(200).json({ job, success: true });
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Internal server error.",
+            success: false
+        });
     }
 }
 // admin kitne job create kra hai abhi tk
@@ -126,9 +134,8 @@ export const getAdminJobs = async (req, res) => {
     try {
         const adminId = req.id;
         const jobs = await Job.find({ created_by: adminId }).populate({
-            path:'company',
-            createdAt:-1
-        });
+            path:'company'
+        }).sort({ createdAt: -1 });
         if (!jobs) {
             return res.status(404).json({
                 message: "Jobs not found.",
@@ -141,5 +148,70 @@ export const getAdminJobs = async (req, res) => {
         })
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Internal server error.",
+            success: false
+        });
     }
 }
+
+export const updateJob = async (req, res) => {
+    try {
+        const jobId = req.params.id;
+        const { title, description, requirements, salary, location, jobType, experience, position, companyId } = req.body;
+        
+        const updateData = {};
+        if (title) updateData.title = title;
+        if (description) updateData.description = description;
+        if (requirements) updateData.requirements = typeof requirements === "string" ? requirements.split(",").map(r => r.trim()).filter(Boolean) : requirements;
+        if (salary !== undefined && salary !== "") updateData.salary = Number(salary);
+        if (location) updateData.location = location;
+        if (jobType) updateData.jobType = jobType;
+        if (experience !== undefined && experience !== "") updateData.experienceLevel = Number(experience);
+        if (position !== undefined && position !== "") updateData.position = Number(position);
+        if (companyId) updateData.company = companyId;
+
+        const job = await Job.findByIdAndUpdate(jobId, updateData, { new: true });
+        if (!job) {
+            return res.status(404).json({
+                message: "Job not found.",
+                success: false
+            });
+        }
+
+        return res.status(200).json({
+            message: "Job updated successfully.",
+            job,
+            success: true
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            message: "Internal server error.",
+            success: false
+        });
+    }
+};
+
+export const deleteJob = async (req, res) => {
+    try {
+        const jobId = req.params.id;
+        const job = await Job.findByIdAndDelete(jobId);
+        if (!job) {
+            return res.status(404).json({
+                message: "Job not found.",
+                success: false
+            });
+        }
+        return res.status(200).json({
+            message: "Job deleted successfully.",
+            success: true
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            message: "Internal server error.",
+            success: false
+        });
+    }
+};

@@ -30,6 +30,10 @@ export const registerCompany = async (req, res) => {
         })
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Internal server error.",
+            success: false
+        });
     }
 }
 export const getCompany = async (req, res) => {
@@ -48,6 +52,10 @@ export const getCompany = async (req, res) => {
         })
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Internal server error.",
+            success: false
+        });
     }
 }
 // get company by id
@@ -67,6 +75,10 @@ export const getCompanyById = async (req, res) => {
         })
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Internal server error.",
+            success: false
+        });
     }
 }
 export const updateCompany = async (req, res) => {
@@ -85,6 +97,7 @@ export const updateCompany = async (req, res) => {
 
         const company = await Company.findByIdAndUpdate(req.params.id, updateData, { new: true });
 
+
         if (!company) {
             return res.status(404).json({
                 message: "Company not found.",
@@ -98,5 +111,32 @@ export const updateCompany = async (req, res) => {
 
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Internal server error.",
+            success: false
+        });
     }
 }
+
+export const deleteCompany = async (req, res) => {
+    try {
+        const companyId = req.params.id;
+        const company = await Company.findByIdAndDelete(companyId);
+        if (!company) {
+            return res.status(404).json({
+                message: "Company not found.",
+                success: false
+            });
+        }
+        return res.status(200).json({
+            message: "Company deleted successfully.",
+            success: true
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            message: "Internal server error.",
+            success: false
+        });
+    }
+};
